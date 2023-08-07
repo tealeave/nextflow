@@ -1,7 +1,7 @@
 /*
  * pipeline input parameters
  */
-params.reads = "$projectDir/data/ggal/gut_{1,2}.fq"
+params.reads = "$projectDir/data/ggal/*_{1,2}.fq"
 params.transcriptome_file = "$projectDir/data/ggal/transcriptome.fa"
 params.multiqc = "$projectDir/multiqc"
 params.outdir = "results"
@@ -16,10 +16,13 @@ log.info """\
     .stripIndent()
 
 /*
- * define the `index` process that creates a binary index
+ * define the `index` process that creates a binary index in a index folder
  * given the transcriptome file
  */
 process INDEX {
+
+    publishDir params.outdir, mode:'copy'
+
     input:
     path transcriptome
 
@@ -51,6 +54,7 @@ process QUANTIFICATION {
 
 process FASTQC {
     tag "FASTQC on $sample_id"
+    publishDir params.outdir, mode:'copy'
 
     input:
     tuple val(sample_id), path(reads)
@@ -69,6 +73,8 @@ workflow {
     Channel
         .fromFilePairs(params.reads, checkIfExists: true)
         .set { read_pairs_ch }
+
+    read_pairs_ch.view()
 
     index_ch = INDEX(params.transcriptome_file)
     quant_ch = QUANTIFICATION(index_ch, read_pairs_ch)

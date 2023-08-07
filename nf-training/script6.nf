@@ -1,7 +1,7 @@
 /*
  * pipeline input parameters
  */
-params.reads = "$projectDir/data/ggal/gut_{1,2}.fq"
+params.reads = "$projectDir/data/ggal/*_{1,2}.fq"
 params.transcriptome_file = "$projectDir/data/ggal/transcriptome.fa"
 params.multiqc = "$projectDir/multiqc"
 params.outdir = "results"
@@ -20,6 +20,9 @@ log.info """\
  * given the transcriptome file
  */
 process INDEX {
+    tag "indexing $transcriptome with Salmon"
+    publishDir params.outdir, mode:'copy'
+
     input:
     path transcriptome
 
@@ -51,6 +54,7 @@ process QUANTIFICATION {
 
 process FASTQC {
     tag "FASTQC on $sample_id"
+    publishDir params.outdir, mode:'copy'
 
     input:
     tuple val(sample_id), path(reads)
@@ -66,9 +70,11 @@ process FASTQC {
 }
 
 process MULTIQC {
+    tag "MultiQC on all data"
     publishDir params.outdir, mode:'copy'
 
     input:
+    // everything?
     path '*'
 
     output:
@@ -88,5 +94,6 @@ workflow {
     index_ch = INDEX(params.transcriptome_file)
     quant_ch = QUANTIFICATION(index_ch, read_pairs_ch)
     fastqc_ch = FASTQC(read_pairs_ch)
+    // use .collect to combine all elements for multiqc
     MULTIQC(quant_ch.mix(fastqc_ch).collect())
 }

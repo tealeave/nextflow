@@ -1,7 +1,7 @@
 /*
  * pipeline input parameters
  */
-params.reads = "$projectDir/data/ggal/gut_{1,2}.fq"
+params.reads = "$projectDir/data/ggal/*_{1,2}.fq"
 params.transcriptome_file = "$projectDir/data/ggal/transcriptome.fa"
 params.multiqc = "$projectDir/multiqc"
 params.outdir = "results"
@@ -33,12 +33,17 @@ process INDEX {
 }
 
 process QUANTIFICATION {
+
+    tag "$sample_id"
+    publishDir params.outdir, mode: 'copy'
+
     input:
     path salmon_index
     tuple val(sample_id), path(reads)
 
     output:
     path "$sample_id"
+
 
     script:
     """
@@ -50,6 +55,8 @@ workflow {
     Channel
         .fromFilePairs(params.reads, checkIfExists: true)
         .set { read_pairs_ch }
+
+    read_pairs_ch.view()
 
     index_ch = INDEX(params.transcriptome_file)
     quant_ch = QUANTIFICATION(index_ch, read_pairs_ch)
